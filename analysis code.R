@@ -4,7 +4,7 @@ library(ggfortify)
 library(GGally)
 library(alr4)
 library(car)
-
+library(rstanarm)
 
 dat <- read.csv("~/R Projects/three30/partyinst_data_330.csv") %>%
   mutate(COW = factor(COWcode.x), leg_elect = factor(v2eltype_0), exe_elect = factor(v2eltype_6), elect_system = factor(v2elcomvot), reg_vs = (v2eltrnout/100)*(v2pavote/100), v2paelcont = as.factor(v2paelcont)) %>%
@@ -31,9 +31,6 @@ dat <- read.csv("~/R Projects/three30/partyinst_data_330.csv") %>%
 #### vap_vs - Percent of the VAP turnout that a party got ****
 #### reg_vs - Percent of the Registered turn out a party got ****
 
-
-ggpairs(dat, columns = c("v2elvaptrn", "v2elvaptrn", "exe_elect", "v2elcomvot", "v2xpa_antiplural", "v2paseatshare", "v2paelcont", "v2papariah", "v2pariglef", "elect_system", "v2x_polyarchy", "piendla", "psla", "vap_vs", "reg_vs"))
-
 summary(dat)
 
 #### The VAP vote share variable, seems suspect, so there may be some coding errors, so we will stick with registed vote share.
@@ -42,7 +39,7 @@ summary(dat)
 attach(dat)
 
 base_model <- lm(reg_vs ~ 1)
-full_model <- lm(reg_vs ~ elect_system + v2pariglef + psla + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + v2elcomvot + v2x_polyarchy)
+full_model <- lm(reg_vs ~ elect_system + v2pariglef + psla + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + v2x_polyarchy)
 
 car::vif(full_model)
 
@@ -128,7 +125,7 @@ autoplot(m2, which = 4, nrow = 1, ncol = 1)
 #### To ensure that we have the best model here, lets rerun this with the stepwise selection
 
 base_model <- lm(reg_vs ~ 1)
-full_model <- lm(reg_vs ~ elect_system + v2pariglef + psla + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + v2elcomvot + v2x_polyarchy)
+full_model <- lm(reg_vs ~ elect_system + v2pariglef + psla + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + v2x_polyarchy)
 
 forward <- step(base_model,
                 direction = "forward",
@@ -180,3 +177,55 @@ car::vif(m3)
 #### No multicolinearity!
 
 summary(m3)
+f2
+
+## Inference
+
+#### center and standardize the data
+
+dat_center <- dat_new %>%
+  mutate(psla = (psla - mean(psla))/(2*sd(psla)), v2pariglef = (v2pariglef - mean(v2pariglef))/(2*sd(v2pariglef)), v2x_polyarchy = (v2x_polyarchy - mean(v2x_polyarchy))/(2*sd(v2x_polyarchy)), v2xpa_antiplural = (v2xpa_antiplural - mean(v2xpa_antiplural))/(2*sd(v2xpa_antiplural)), v2papariah = (v2papariah - mean(v2papariah))/(2*sd(v2papariah)))
+
+
+
+stan_sub <- stan_glm(f2, data = dat_center, refresh = 0)
+
+new_data <- data.frame(psla = c(0, 1, 0,0,0,0,0,0,0,0,0), elect_system = c("0", "0", "1", "2", "3", "0","0","0","0","0","0"), v2pariglef = c(0,0,0,0,0,1,0,0,0,0,0), v2x_polyarchy = c(0,0,0,0,0,0,1,0,0,0,0), v2xpa_antiplural = c(0,0,0,0,0,0,0,1, 0,0,0), v2papariah = c(0,0,0,0,0,0,0,0,1,0, 0), v2paelcont = c("0", "0", "0", "0", "0", "0","0","0","0","1","2"))
+
+predictions <- posterior_linpred(stan_sub, newdata = new_data)
+
+pred_mat <- matrix(NA, nrow = 10, ncol = 3)
+for (i in 1:10) {
+  sub <- predictions[,1+i] - predictions[,1]
+  pred_mat[i,] <- quantile(sub, c(0.025, .5, .975))
+  }
+
+pred_mat <- as.data.frame(pred_mat)
+colnames(pred_mat) <- c("lower", "median", "upper")
+pred_mat$IV <- c("Party Stregnth", "Compulsory Vote (Mild)", "Compulsory Vote (Medium)", "Compulsory Vote (Strong)", "Left Wing", "Democracy", "Anti-Pluralist", "Pariah", "Reformed Party", "Same Party")
+
+pred_mat <- pred_mat %>%
+  mutate(IV = reorder(IV, -median))
+
+#### Use this to show out results instead of a regression table.
+
+ggplot(data = pred_mat) +
+  geom_linerange(aes(y = IV, xmin = upper*-1, xmax = lower*-1)) +
+  geom_point(aes(y = IV, x = median*-1)) +
+  labs(title="Substantive Effects of Predictors On Vote Share", y = "", x = "Effect Size", caption = "All predictors are mean centered and standardized to a 2 standard deviation change") +
+  theme_minimal() +
+  geom_vline(xintercept = 0)
+
+#### How important is the effect of party strength
+
+m3 <- lm(reg_vs ~ psla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new)
+
+m4 <- lm(reg_vs ~ elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new)
+
+anova(m3, m4)
+
+stan_sub2 <- stan_glm(reg_vs ~ piendla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new, refresh = 0)
+
+loo_m1 <- loo(stan_sub)
+loo_m2 <- loo(stan_sub2)
+loo_compare(loo_m1, loo_m2)
