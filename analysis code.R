@@ -222,7 +222,9 @@ m3 <- lm(reg_vs ~ psla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antip
 
 m4 <- lm(reg_vs ~ elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new)
 
-anova(m3, m4)
+m5 <- lm(reg_vs ~ piendla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new)
+
+anova(m3, m4, m5)
 
 stan_sub2 <- stan_glm(reg_vs ~ piendla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new, refresh = 0)
 
