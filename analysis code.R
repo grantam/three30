@@ -231,3 +231,99 @@ stan_sub2 <- stan_glm(reg_vs ~ piendla + elect_system + v2pariglef + v2x_polyarc
 loo_m1 <- loo(stan_sub)
 loo_m2 <- loo(stan_sub2)
 loo_compare(loo_m1, loo_m2)
+
+#### model for question 2
+
+attach(dat_center)
+
+base_model <- lm(reg_vs ~ psla*v2x_polyarchy)
+full_model <- lm(reg_vs ~ elect_system + v2pariglef + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + psla*v2x_polyarchy)
+
+forward <- step(base_model,
+                direction = "forward",
+                k = 2,
+                scope = list(lower = base_model, upper = full_model))
+
+back <- step(full_model,
+             direction = "backward",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+both <- step(base_model,
+             direction = "both",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+forward
+back
+both
+
+#### all the models give the same formula here, so we are going to go with:
+
+f3 <- reg_vs ~ psla + v2x_polyarchy + elect_system + v2pariglef + 
+  v2xpa_antiplural + v2papariah + v2paelcont + psla:v2x_polyarchy
+
+
+#### check assumptions
+
+inter1 <- lm(f3)
+
+autoplot(inter1, which = 1, nrow = 1, ncol = 1)
+
+#### linearity looks good
+
+autoplot(inter1, which = 2, nrow = 1, ncol = 1)
+hist(inter1$residuals)
+
+#### looks pretty normal
+
+autoplot(inter1, which = 3, nrow = 1, ncol = 1)
+
+#### constant variance looks good
+
+autoplot(inter1, which = 4, nrow = 1, ncol = 1)
+
+#### no serious outliers.
+
+car::vif(inter1, type = "predictor")
+
+#### no multicolinearity
+
+#### meets assumptions
+
+#### look at the summary
+
+summary(inter1)
+
+#### make a plot to show it
+
+stan_sub <- stan_glm(f3, data = dat_center, refresh = 0)
+
+new_data <- data.frame(psla = c(0,0, 0, 1, 1, 1), elect_system = "0", v2pariglef = 0, v2x_polyarchy = c(-1,0,1,-1,0,1), v2xpa_antiplural = 0, v2papariah = 0, v2paelcont = "0")
+
+predictions <- posterior_linpred(stan_sub, newdata = new_data)
+
+pred_mat <- matrix(NA, nrow = 3, ncol = 3)
+for (i in 1:3) {
+  sub <- predictions[,3+i] - predictions[,i]
+  pred_mat[i,] <- quantile(sub, c(0.025, .5, .975))
+}
+
+pred_mat <- as.data.frame(pred_mat)
+colnames(pred_mat) <- c("lower", "median", "upper")
+pred_mat$IV <- c("Party Strength (Democracy = 2.5%)", "Party Strength (Democracy = 50%)", "Party Strength (Democracy = 97.5%)")
+
+pred_mat <- pred_mat %>%
+  mutate(IV = reorder(IV, -median))
+
+#### Use this to show out results instead of a regression table.
+
+ggplot(data = pred_mat) +
+  geom_linerange(aes(y = IV, xmin = upper*-1, xmax = lower*-1)) +
+  geom_point(aes(y = IV, x = median*-1)) +
+  labs(title="Substantive Effects of Party Strength", subtitle = "At Different Levels of Democracy", y = "", x = "Effect Size", caption = "All predictors are mean centered and standardized to a 2 standard deviation change") +
+  theme_minimal()
+
+#### what model is better? Interaction for non-interaction?
+
+anova(m3, inter1)
