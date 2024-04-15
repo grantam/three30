@@ -23,27 +23,41 @@ text-align: center;
 
 # Abstract
 
-Here, you will briefly summarize the entire report, including the data used, questions of interest, and relevant findings.
+There is no institution in modern day politics more important than elections. Regardless of whether a regime is democratic (where elections are free and fair) or autocratic, election are a staple of today's political world, providing (some) legitimacy to those who win them. Thus, one of the central puzzles in the social sciences is why some parties win more votes than others. In this paper, we fit several statistical models to predict party vote share, finding that party strength is the best predictor of a party's success in elections.
 
 # 1 Problem and Motivation
 
-In this section, you will describe the background information about the study that is necessary to understand why the data are important.  In other words, why was it important to gather the data in the first place?
+There is no institution in modern day politics more important than elections. Since the 1990's almost every country in the world has switched to using elections to decide which party or candidate is in government. Even in autocratic regimes like modern day China and Russia use elections to justify the incumbents' stays in power, even if the results are pre-determined. 
+
+Given the importance of elections, tools and variables that predict elections are valuable. In this paper, we create several statistical models that predict the vote share of elections' primary actors: political parties. In doing so, we identify several factors that strongly influence voter share. Additionally, we explore how the effect of various predictors of vote share change depending on the level of democracy in the country.
 
 ## 1.1 Data Description
 
-Briefly state the source of your data and describe the relevant variables that **you will use** in your project.  Include important details such as units for the different variables, and what the ``observational units" (rows in the data set) represent (e.g., individuals, countries, etc.)
+To fit our models, we use data from the Varieties of Democracy database (V-Dem). V-Dem is the largest database on democracy and parties in the world, covering country-level democracy data in every country from 1789 to now and party-level data from 1970 to now. Every variable we use in our data comes from V-Dem, allowing us to cover over 3000 parties in 165 countries over the a 50 year period. For our models, our unit of analysis is party-year. For example, the United States Republican Party in 2000 is an observation in our analysis.
+
+We consider several predictors of party vote share. Regarding party factors, we include measures of ideology (left-right), anti-pluralism, if the party is a pariah, party brand continuity, and party strength. We also include several country factors, including, compulsory voting, election type, and quality of democracy. 
+
+Because of scholars recent focus on party strength (i.e., the party's organizational capacity to mobilize its voters), we are particularly interested in it effect.
+
+For our dependent variable, we use a parties raw vote percentage and multiply it by the registered voter turnout. We do this for easier comparison between cases, as we expect some parties to not only increase their raw vote share, but to encourage higher voter turnout.
 
 ## 1.2 Questions of Interest
 
-Briefly and clearly state the two main questions that you will investigate throughout the report.  These questions should be stated in scientific, and not statistical language.  For example, "Is the slope of log of per capita GDP significantly different from zero?" should instead by give as "Does the log of per capita GDP have an effect on the average life expectancy of females in a given country?"
+We are interested in two questions. First, what variables best predict the a party's vote share? A branch of this question is what is the effect of party strength on party vote share?
+
+The second question is related two the first. How does the relationship between party strength and vote share change given the countries level of democracy?
 
 ## 1.3 Regression Methods
 
-For each question of interest listed in Section 2, describe what regression models, techniques, and tools you will use to fully answer it.  These should include any plots you will use for exploratory analysis or diagnostic checks, as well as methods of inference you will use. 
+Two answer the first question, we use forward, backward, and sequential stepwise model selection to choose our predictors. After checking assumptions, re-selecting variables, and transforming our variables to meet the regression assumptions, we came to this formula:
+
+***SOMEONE MAKE THIS LATEX***
+(1/vote share) ~ Party Strength + Compulsory Voting + Ideology + Democracy Score + Anti_Pluralism + Pariah + Party Brand Constinutiy
+
 
 # 2 Analyses, Results, and Interpretation
 
-Conduct the analysis in a logical fashion, including necessary code (and not any superfluous code) and its output.  Give simple interpretations of your findings related to the questions of interest.
+Conduct the analysis in a logical fashion, including necessary code (and not any superfluous code) and its output. Give simple interpretations of your findings related to the questions of interest.
 
 # 3 Conclusions
 
