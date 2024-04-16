@@ -7,6 +7,8 @@ library(GGally)
 library(alr4)
 library(car)
 library(rstanarm)
+library(interflex)
+library(interplot)
 
 dat <- read.csv("~/R Projects/three30/partyinst_data_330.csv") %>%
   mutate(COW = factor(COWcode.x), leg_elect = factor(v2eltype_0), exe_elect = factor(v2eltype_6), elect_system = factor(v2elcomvot), reg_vs = (v2eltrnout/100)*(v2pavote/100), v2paelcont = as.factor(v2paelcont)) %>%
@@ -181,6 +183,41 @@ car::vif(m3)
 summary(m3)
 f2
 
+
+### Exploratory Data Analysis
+
+ggplot(data = dat, aes(x = psla, y = reg_vs)) +
+  geom_point() +
+  geom_smooth() + 
+  labs(title = "Party Stregnth vs Vote Share (Pre Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+ggplot(data = dat_new, aes(x = psla, y = reg_vs)) +
+  geom_point() +
+  geom_smooth() +
+  labs(title = "Party Stregnth vs Vote Share (Post Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+#### for Question 2
+
+ggplot(data = dat, aes(x = psla, y = reg_vs)) +
+  geom_point(aes(color = v2x_polyarchy)) +
+  geom_smooth(color = "red") + 
+  labs(title = "Party Stregnth vs Vote Share (Pre Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+ggplot(data = dat_new, aes(x = psla, y = reg_vs)) +
+  geom_point(aes(color = v2x_polyarchy)) +
+  geom_smooth(color = "red") + 
+  labs(title = "Party Stregnth vs Vote Share (Post Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+dat_interflex <- dat %>%
+  rename(Democracy = v2x_polyarchy, Vote_Share = reg_vs, Party_Strength = psla)
+
+interflex(estimator = "gam", Y = "Vote_Share", X = "Party_Strength", D = "Democracy", data = dat_interflex)
+
+
 ## Inference
 
 #### center and standardize the data
@@ -233,6 +270,28 @@ stan_sub2 <- stan_glm(reg_vs ~ piendla + elect_system + v2pariglef + v2x_polyarc
 loo_m1 <- loo(stan_sub)
 loo_m2 <- loo(stan_sub2)
 loo_compare(loo_m1, loo_m2)
+
+#### robustness check
+
+robust <- stan_glm(gov ~ psla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new, family = binomial(link = "logit"), refresh = 0)
+
+test_data <- data.frame(psla = seq(0,1,by=.1), elect_system = "0", v2pariglef = 0, v2x_polyarchy = 0, v2xpa_antiplural = 0, v2papariah = 0, v2paelcont = "0")
+
+fv <- posterior_epred(robust, newdata = test_data)
+
+fitted_values <- as.data.frame(apply(fv, 2, mean))
+
+ps <- seq(0,1, by = .1)
+
+test_data1 <- cbind(ps, fitted_values) %>%
+  rename(fv =`apply(fv, 2, mean)`)
+
+summary(robust)
+
+ggplot(data = test_data1, aes(x = ps, y = fv)) +
+  geom_smooth(color = "black") +
+  labs(title = "Probability of Controling Government", x = "Party Strength", y = "Pr(Winning Governemnt)") +
+  theme_minimal()
 
 #### model for question 2
 
