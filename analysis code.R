@@ -385,6 +385,17 @@ ggplot(data = pred_mat) +
   labs(title="Substantive Effects of Party Strength", subtitle = "At Different Levels of Democracy", y = "", x = "Effect Size", caption = "All predictors are mean centered and standardized to a 2 standard deviation change") +
   theme_minimal()
 
+inter2 <- lm(-1*reg_vs ~ psla + v2x_polyarchy + elect_system + v2pariglef + v2xpa_antiplural + 
+               v2papariah + v2paelcont + psla:v2x_polyarchy, data = dat_new)
+
+interplot(m = inter2, var1 = "psla", var2 = "v2x_polyarchy") +
+  labs(title = "Marginal Effect of Party Strength", subtitle = "Conditional on Democratic Quality", x = "Quality of Democracy", y = "Effect (Beta) of Party Strength") +
+  theme_minimal()
+  
+
 #### what model is better? Interaction for non-interaction?
 
 anova(m3, inter1)
+
+## Predicting votes share of famous parties
+
