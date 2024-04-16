@@ -60,7 +60,8 @@ Two answer the first question, we use forward, backward, and sequential stepwise
 Conduct the analysis in a logical fashion, including necessary code (and not any superfluous code) and its output. Give simple interpretations of your findings related to the questions of interest.
 
 
-As mentioned in the regression methods subsection, we utilize forward, backward, and sequential stepwise model selection in order to find the variables that have an effect on party vote share. The result tells us that the best predictors of party vote share are: party strength, compulsory voting, ideology, democracy score, anti-pluralism, pariah, and party brand continuity. Using these selected predictors, we create a model and check the model assumptions. 
+As mentioned in the regression methods subsection, we utilize forward, backward, and sequential stepwise model selection in order to find the variables that have an effect on party vote share. The result tells us that the best predictors of party vote share are: party strength, compulsory voting, ideology, democracy score, anti-pluralism, pariah, and party brand continuity. Using these selected predictors, we create a model and check the model assumptions. A historgram of the response variable appears skewed. To remedy this, we apply a Box Cox transformation and rerun the stepwise function. 
+We check the assumptions with this new model and find that the assumption of linearity is satisfied, the errors are not perfectly normal, but they are the most normal errors of all our models. The model is mostly homogenous, it is free of outliars, and without multicollinearity.  
 
 
 # 3 Conclusions
