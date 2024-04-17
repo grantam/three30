@@ -80,7 +80,7 @@ autoplot(m1, which = 1, nrow = 1, ncol = 1)
 #### Linearity looks suprisingly good here.
 
 autoplot(m1, which = 2, nrow = 1, ncol = 1) 
-shapiro.test(m1$residuals)
+hist(m1$residuals)
 
 #### Errors are not normal!
 
@@ -114,7 +114,7 @@ autoplot(m2, which = 1, nrow = 1, ncol = 1)
 #### Linearity looks suprisingly good here.
 
 autoplot(m2, which = 2, nrow = 1, ncol = 1) 
-shapiro.test(m1$residuals)
+hist(m2$residuals)
 
 #### Errors are more normal!
 
@@ -285,8 +285,6 @@ ps <- seq(0,1, by = .1)
 
 test_data1 <- cbind(ps, fitted_values) %>%
   rename(fv =`apply(fv, 2, mean)`)
-
-summary(robust)
 
 ggplot(data = test_data1, aes(x = ps, y = fv)) +
   geom_smooth(color = "black") +
