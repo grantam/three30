@@ -1,6 +1,6 @@
 ---
-title: "Final Project Template"
-author: Dr. Sandholtz
+title: "The Effect of Party Strength on Party Vote Share"
+author: Alex Jenks, Grant Mitchell, and Ethan Scott
 output: pdf_document
 ---
 
