@@ -457,16 +457,14 @@ We are interested in two questions. First, what variables best predict the a par
 
 To answer the first question, we use forward, backward, and sequential stepwise model selection to choose our predictors. After checking assumptions, re-selecting variables, and transforming our variables to meet the regression assumptions, we came to this formula:
 
-\[
-VoteShare^{-1} = \beta_0 + \beta_1 \text{Party Strength} + \beta_2 \text{Ideology} + \beta_3 \text{Democracy Score} + \beta_4 \text{AntiPluralism} + \beta_5 \text{Pariah} + \beta_6 (\text{PartyBrand Continuity} = \text{Reformed Party}) + \beta_7 (\text{PartyBrand Continuity} = \text{Same Party}) + \beta_8 (\text{Compulsory Voting} = \text{Mild Enforcement}) + \beta_9 (\text{Compulsory Voting} = \text{Medium Enforcement}) + \beta_{10} (\text{Compulsory Voting} = \text{Strong Enforcement}) + \text{Error}
-\]
+
+$VoteShare^{-1} = \beta_0 + \beta_1 \text{Party Strength} + \beta_2 \text{Ideology} + \beta_3 \text{Democracy Score} + \beta_4 \text{AntiPluralism} + \beta_5 \text{Pariah} + \beta_6 (\text{PartyBrand Continuity} = \text{Reformed Party}) + \beta_7 (\text{PartyBrand Continuity} = \text{Same Party}) + \beta_8 (\text{Compulsory Voting} = \text{Mild Enforcement}) + \beta_9 (\text{Compulsory Voting} = \text{Medium Enforcement}) + \beta_{10} (\text{Compulsory Voting} = \text{Strong Enforcement}) + \text{Error}$
 
 
 Using the same processes, we came to the following formula for the interaction model between democracy and party strength:
 
-\[
-VoteShare^{-1} = \beta_0 + \beta_1 \text{Party Strength} + \beta_2 \text{Ideology} + \beta_3 \text{Democracy Score} + \beta_4 \text{AntiPluralism} + \beta_5 \text{Pariah} + \beta_6 (\text{PartyBrand Continuity} = \text{Reformed Party}) + \beta_7 (\text{PartyBrand Continuity} = \text{Same Party}) + \beta_8 (\text{Compulsory Voting} = \text{Mild Enforcement}) + \beta_9 (\text{Compulsory Voting} = \text{Medium Enforcement}) + \beta_{10} (\text{Compulsory Voting} = \text{Strong Enforcement}) + \beta_{11} (\text{Party Strength} \times \text{Democracy Score}) + \text{Error}
-\]
+
+$VoteShare^{-1} = \beta_0 + \beta_1 \text{Party Strength} + \beta_2 \text{Ideology} + \beta_3 \text{Democracy Score} + \beta_4 \text{AntiPluralism} + \beta_5 \text{Pariah} + \beta_6 (\text{PartyBrand Continuity} = \text{Reformed Party}) + \beta_7 (\text{PartyBrand Continuity} = \text{Same Party}) + \beta_8 (\text{Compulsory Voting} = \text{Mild Enforcement}) + \beta_9 (\text{Compulsory Voting} = \text{Medium Enforcement}) + \beta_{10} (\text{Compulsory Voting} = \text{Strong Enforcement}) + \beta_{11} (\text{Party Strength} \times \text{Democracy Score}) + \text{Error}$
 
 
 For our analysis, we report the results of three models: a baseline OLS model to compare effect of vote share, a logistical regression model using the same formula as the baseline to compare effect on control of government, and an interaction OLS model on vote share again. You can find the full results and methodology in the appendix.
