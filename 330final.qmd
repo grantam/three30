@@ -1,0 +1,948 @@
+---
+title: "Statistics 330 Paper"
+format: pdf
+editor: visual
+author: Alex Jenks, Grant Mitchell, and Ethan Scott
+---
+
+```{=pdf}
+<style type="text/css">
+h1.title {
+font-size: 40px;
+text-align: center;
+}
+h4.author {
+font-size: 40px;
+text-align: center;
+}
+</style>
+```
+\newpage
+
+```{r setup, include=FALSE}
+#### By Grant and Alex and Ethan
+
+library(tidyverse)
+library(ggthemes)
+library(ggfortify)
+library(GGally)
+library(alr4)
+library(car)
+library(rstanarm)
+library(interflex)
+library(interplot)
+
+dat <- read.csv("~/R Projects/three30/partyinst_data_330.csv") %>%
+  mutate(COW = factor(COWcode.x), leg_elect = factor(v2eltype_0), exe_elect = factor(v2eltype_6), elect_system = factor(v2elcomvot), reg_vs = (v2eltrnout/100)*(v2pavote/100), v2paelcont = as.factor(v2paelcont)) %>%
+  na.omit()
+
+#Alex path "C:/Users/alexj/OneDrive/Documents/BYU_CLASSES/STAT330/final_proj/R Projects/three30/partyinst_data_330.csv"
+
+#Grant path "~/R Projects/three30/partyinst_data_330.csv"
+
+#### Here are the names of the variables we will be using:
+#### COW - a numerical indicator given to each country
+#### v2elvaptrn - Voting Age Turnout
+#### v2elvaptrn - Registered turnout
+#### leg_elect - legislative elections
+#### exe_elect - execitive elections
+#### v2elcomvot - Compulsory voting
+#### v2xpa_antiplural - party's anti-pluralism measure
+#### v2pavote - party vote share
+#### v2paseatshare - party seat share
+#### v2paelcont - party brand continuity
+#### v2papariah - party's pariah measure
+#### v2pariglef - Party left right scale
+#### elect_system - electoral system
+#### v2x_polyarchy - Democracy score
+#### piendla - Party institutioanlization ****
+#### psla - Party stregnth ****
+#### vap_vs - Percent of the VAP turnout that a party got ****
+#### reg_vs - Percent of the Registered turn out a party got ****
+
+summary(dat)
+
+#### The VAP vote share variable, seems suspect, so there may be some coding errors, so we will stick with registed vote share.
+
+## Stepwise model selection
+attach(dat)
+
+base_model <- lm(reg_vs ~ 1)
+full_model <- lm(reg_vs ~ elect_system + v2pariglef + psla + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + v2x_polyarchy)
+
+car::vif(full_model)
+
+forward <- step(base_model,
+                direction = "forward",
+                k = 2,
+                scope = list(lower = base_model, upper = full_model))
+
+back <- step(full_model,
+                direction = "backward",
+                k = 2,
+                scope = list(lower = base_model, upper = full_model))
+
+both <- step(base_model,
+             direction = "both",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+forward
+back
+both
+
+#### The best formula from all three stepwise selections is this:
+
+f1 <- reg_vs ~ psla + elect_system + v2x_polyarchy + v2pariglef + 
+  v2papariah + v2paelcont
+
+#### Looking at the model and checking assumptions
+
+m1 <- lm(f1)
+
+autoplot(m1, which = 1, nrow = 1, ncol = 1)
+
+#### Linearity looks suprisingly good here.
+
+autoplot(m1, which = 2, nrow = 1, ncol = 1) 
+shapiro.test(m1$residuals)
+
+#### Errors are not normal!
+
+autoplot(m1, which = 3, nrow = 1, ncol = 1) 
+
+#### There might be some heterogeneity, but its pretty good here.
+
+autoplot(m1, which = 4, nrow = 1, ncol = 1)
+
+#### Cooks Distance looks pretty good
+
+#### Lets look at the histogram for the dependent variable
+
+hist(reg_vs) #### This looks really skewed. Whe might want to do a Box Cox transformation
+
+f1
+bc_results <- boxCox((reg_vs+.1) ~ psla + elect_system + v2x_polyarchy + v2pariglef + v2papariah + 
+                       v2paelcont)
+
+#### It looks like we should mutate the DV and make it reg_vs^-1
+
+dat_new <- dat %>%
+  mutate(reg_vs = (reg_vs + .1)^(-1))
+
+attach(dat_new)  
+
+m2 <- lm(f1)
+
+autoplot(m2, which = 1, nrow = 1, ncol = 1)
+
+#### Linearity looks suprisingly good here.
+
+autoplot(m2, which = 2, nrow = 1, ncol = 1) 
+shapiro.test(m1$residuals)
+
+#### Errors are more normal!
+
+autoplot(m2, which = 3, nrow = 1, ncol = 1) 
+
+#### There might be some heterogeneity, but its pretty good here.
+
+autoplot(m2, which = 4, nrow = 1, ncol = 1)
+
+#### Cooks Distance looks pretty good
+
+#### To ensure that we have the best model here, lets rerun this with the stepwise selection
+
+base_model <- lm(reg_vs ~ 1)
+full_model <- lm(reg_vs ~ elect_system + v2pariglef + psla + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + v2x_polyarchy)
+
+forward <- step(base_model,
+                direction = "forward",
+                k = 2,
+                scope = list(lower = base_model, upper = full_model))
+
+back <- step(full_model,
+             direction = "backward",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+both <- step(base_model,
+             direction = "both",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+forward
+back
+both
+
+#### All of the selection methods choose this model, so we will go with that:
+
+f2 <- reg_vs ~ psla + elect_system + v2pariglef + v2x_polyarchy + 
+  v2xpa_antiplural + v2papariah + v2paelcont
+
+#### Checking assumptions once again.
+
+m3 <- lm(f2)
+
+autoplot(m3, which = 1, nrow = 1, ncol = 1)
+
+#### Linearity looks good here.
+
+autoplot(m3, which = 2, nrow = 1, ncol = 1) 
+shapiro.test(m3$residuals)
+
+#### Errors are more normal than the other models. Best we are probaly going to get.
+
+autoplot(m3, which = 3, nrow = 1, ncol = 1) 
+
+#### There might be some heterogeneity, but its pretty good here.
+
+autoplot(m3, which = 4, nrow = 1, ncol = 1)
+
+#### no outliers
+
+car::vif(m3)
+
+#### No multicolinearity!
+
+summary(m3)
+f2
+
+
+### Exploratory Data Analysis
+
+ggplot(data = dat, aes(x = psla, y = reg_vs)) +
+  geom_point() +
+  geom_smooth() + 
+  labs(title = "Party Stregnth vs Vote Share (Pre Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+ggplot(data = dat_new, aes(x = psla, y = reg_vs)) +
+  geom_point() +
+  geom_smooth() +
+  labs(title = "Party Stregnth vs Vote Share (Post Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+#### for Question 2
+
+ggplot(data = dat, aes(x = psla, y = reg_vs)) +
+  geom_point(aes(color = v2x_polyarchy)) +
+  geom_smooth(color = "red") + 
+  labs(title = "Party Stregnth vs Vote Share (Pre Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+ggplot(data = dat_new, aes(x = psla, y = reg_vs)) +
+  geom_point(aes(color = v2x_polyarchy)) +
+  geom_smooth(color = "red") + 
+  labs(title = "Party Stregnth vs Vote Share (Post Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+dat_interflex <- dat %>%
+  rename(Democracy = v2x_polyarchy, Vote_Share = reg_vs, Party_Strength = psla)
+
+interflex(estimator = "gam", Y = "Vote_Share", X = "Party_Strength", D = "Democracy", data = dat_interflex)
+
+
+## Inference
+
+#### center and standardize the data
+
+dat_center <- dat_new %>%
+  mutate(psla = (psla - mean(psla))/(2*sd(psla)), v2pariglef = (v2pariglef - mean(v2pariglef))/(2*sd(v2pariglef)), v2x_polyarchy = (v2x_polyarchy - mean(v2x_polyarchy))/(2*sd(v2x_polyarchy)), v2xpa_antiplural = (v2xpa_antiplural - mean(v2xpa_antiplural))/(2*sd(v2xpa_antiplural)), v2papariah = (v2papariah - mean(v2papariah))/(2*sd(v2papariah)))
+
+
+
+stan_sub <- stan_glm(f2, data = dat_center, refresh = 0)
+
+new_data <- data.frame(psla = c(0, 1, 0,0,0,0,0,0,0,0,0), elect_system = c("0", "0", "1", "2", "3", "0","0","0","0","0","0"), v2pariglef = c(0,0,0,0,0,1,0,0,0,0,0), v2x_polyarchy = c(0,0,0,0,0,0,1,0,0,0,0), v2xpa_antiplural = c(0,0,0,0,0,0,0,1, 0,0,0), v2papariah = c(0,0,0,0,0,0,0,0,1,0, 0), v2paelcont = c("0", "0", "0", "0", "0", "0","0","0","0","1","2"))
+
+predictions <- posterior_linpred(stan_sub, newdata = new_data)
+
+pred_mat <- matrix(NA, nrow = 10, ncol = 3)
+for (i in 1:10) {
+  sub <- predictions[,1+i] - predictions[,1]
+  pred_mat[i,] <- quantile(sub, c(0.025, .5, .975))
+  }
+
+pred_mat <- as.data.frame(pred_mat)
+colnames(pred_mat) <- c("lower", "median", "upper")
+pred_mat$IV <- c("Party Stregnth", "Compulsory Vote (Mild)", "Compulsory Vote (Medium)", "Compulsory Vote (Strong)", "Left Wing", "Democracy", "Anti-Pluralist", "Pariah", "Reformed Party", "Same Party")
+
+pred_mat <- pred_mat %>%
+  mutate(IV = reorder(IV, -median))
+
+#### Use this to show out results instead of a regression table.
+
+ggplot(data = pred_mat) +
+  geom_linerange(aes(y = IV, xmin = upper*-1, xmax = lower*-1)) +
+  geom_point(aes(y = IV, x = median*-1)) +
+  labs(title="Substantive Effects of Predictors On Vote Share", y = "", x = "Effect Size", caption = "All predictors are mean centered and standardized to a 2 standard deviation change") +
+  theme_minimal() +
+  geom_vline(xintercept = 0)
+
+#### How important is the effect of party strength
+
+m3 <- lm(reg_vs ~ psla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new)
+
+m4 <- lm(reg_vs ~ elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new)
+
+m5 <- lm(reg_vs ~ piendla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new)
+
+anova(m3, m4, m5)
+
+stan_sub2 <- stan_glm(reg_vs ~ piendla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new, refresh = 0)
+
+loo_m1 <- loo(stan_sub)
+loo_m2 <- loo(stan_sub2)
+loo_compare(loo_m1, loo_m2)
+
+#### robustness check
+
+robust <- stan_glm(gov ~ psla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new, family = binomial(link = "logit"), refresh = 0)
+
+test_data <- data.frame(psla = seq(0,1,by=.1), elect_system = "0", v2pariglef = 0, v2x_polyarchy = 0, v2xpa_antiplural = 0, v2papariah = 0, v2paelcont = "0")
+
+fv <- posterior_epred(robust, newdata = test_data)
+
+fitted_values <- as.data.frame(apply(fv, 2, mean))
+
+ps <- seq(0,1, by = .1)
+
+test_data1 <- cbind(ps, fitted_values) %>%
+  rename(fv =`apply(fv, 2, mean)`)
+
+summary(robust)
+
+ggplot(data = test_data1, aes(x = ps, y = fv)) +
+  geom_smooth(color = "black") +
+  labs(title = "Probability of Controling Government", x = "Party Strength", y = "Pr(Winning Governemnt)") +
+  theme_minimal()
+
+#### model for question 2
+
+attach(dat_center)
+
+base_model <- lm(reg_vs ~ psla*v2x_polyarchy)
+full_model <- lm(reg_vs ~ elect_system + v2pariglef + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + psla*v2x_polyarchy)
+
+forward <- step(base_model,
+                direction = "forward",
+                k = 2,
+                scope = list(lower = base_model, upper = full_model))
+
+back <- step(full_model,
+             direction = "backward",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+both <- step(base_model,
+             direction = "both",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+forward
+back
+both
+
+#### all the models give the same formula here, so we are going to go with:
+
+f3 <- reg_vs ~ psla + v2x_polyarchy + elect_system + v2pariglef + 
+  v2xpa_antiplural + v2papariah + v2paelcont + psla:v2x_polyarchy
+
+
+#### check assumptions
+
+inter1 <- lm(f3)
+
+autoplot(inter1, which = 1, nrow = 1, ncol = 1)
+
+#### linearity looks good
+
+autoplot(inter1, which = 2, nrow = 1, ncol = 1)
+hist(inter1$residuals)
+
+#### looks pretty normal
+
+autoplot(inter1, which = 3, nrow = 1, ncol = 1)
+
+#### constant variance looks good
+
+autoplot(inter1, which = 4, nrow = 1, ncol = 1)
+
+#### no serious outliers.
+
+car::vif(inter1, type = "predictor")
+
+#### no multicolinearity
+
+#### meets assumptions
+
+#### look at the summary
+
+summary(inter1)
+
+#### make a plot to show it
+
+stan_sub <- stan_glm(f3, data = dat_center, refresh = 0)
+
+new_data <- data.frame(psla = c(0,0, 0, 1, 1, 1), elect_system = "0", v2pariglef = 0, v2x_polyarchy = c(-1,0,1,-1,0,1), v2xpa_antiplural = 0, v2papariah = 0, v2paelcont = "0")
+
+predictions <- posterior_linpred(stan_sub, newdata = new_data)
+
+pred_mat <- matrix(NA, nrow = 3, ncol = 3)
+for (i in 1:3) {
+  sub <- predictions[,3+i] - predictions[,i]
+  pred_mat[i,] <- quantile(sub, c(0.025, .5, .975))
+}
+
+pred_mat <- as.data.frame(pred_mat)
+colnames(pred_mat) <- c("lower", "median", "upper")
+pred_mat$IV <- c("Party Strength (Democracy = 2.5%)", "Party Strength (Democracy = 50%)", "Party Strength (Democracy = 97.5%)")
+
+pred_mat <- pred_mat %>%
+  mutate(IV = reorder(IV, -median))
+
+#### Use this to show out results instead of a regression table.
+
+ggplot(data = pred_mat) +
+  geom_linerange(aes(y = IV, xmin = upper*-1, xmax = lower*-1)) +
+  geom_point(aes(y = IV, x = median*-1)) +
+  labs(title="Substantive Effects of Party Strength", subtitle = "At Different Levels of Democracy", y = "", x = "Effect Size", caption = "All predictors are mean centered and standardized to a 2 standard deviation change") +
+  theme_minimal()
+
+inter2 <- lm(-1*reg_vs ~ psla + v2x_polyarchy + elect_system + v2pariglef + v2xpa_antiplural + 
+               v2papariah + v2paelcont + psla:v2x_polyarchy, data = dat_new)
+
+interplot(m = inter2, var1 = "psla", var2 = "v2x_polyarchy") +
+  labs(title = "Marginal Effect of Party Strength", subtitle = "Conditional on Democratic Quality", x = "Quality of Democracy", y = "Effect (Beta) of Party Strength") +
+  theme_minimal()
+  
+
+#### what model is better? Interaction for non-interaction?
+
+anova(m3, inter1)
+
+## Predicting votes share of famous parties
+
+
+
+
+```
+
+# Abstract
+
+There is no institution in modern day politics more important than elections. Regardless of whether a regime is democratic (where elections are free and fair) or autocratic, election are a staple of today's political world, providing (some) legitimacy to those who win them. Thus, one of the central puzzles in the social sciences is why some parties win more votes than others. In this paper, we fit several statistical models to predict party vote share, finding that party strength is the best predictor of a party's success in elections.
+
+# 1 Problem and Motivation
+
+There is no institution in modern day politics more important than elections. Since the 1990s, almost every country in the world has switched to using elections to decide which party or candidate is in government. Even in autocratic regimes like contemporary China and Russia use elections to justify the incumbents' stays in power, even if the results are pre-determined.
+
+  Given the importance of elections, tools and variables that predict elections are valuable. In this paper, we create several statistical models that predict the vote share of elections' primary actors: political parties. In doing so, we identify several factors that strongly influence voter share. Additionally, we explore how the effect of predictors of vote share change depending on the level of democracy in the country.
+
+## 1.1 Data Description
+
+To fit our models, we use data from the Varieties of Democracy database (V-Dem). V-Dem is the largest database on democracy and parties in the world, covering country-level democracy data in every country from 1789 to now and party-level data from 1970 to now. Every variable we use in our data comes from V-Dem, allowing us to cover over 1600 parties in 165 countries over the a 50 year period. For our models, our unit of analysis is a party-year observation. For example, the United States Republican Party in 2000 is an observation in our analysis.
+
+  We consider several predictors of party vote share. Regarding party factors, we include the measures of ideology, anti-pluralism (how favorably they view democracy), if the party is a pariah (i.e., and outcast), party brand continuity (new party, reformed party, same party as last election), and party strength. We also include several country factors, including, compulsory voting (none, mild enforcement, medium enforcement, and strong enforcement), election type, and quality of democracy. Because of scholar's recent focus on party strength (i.e., the party's organizational capacity to mobilize its voters), we are particularly interested in it's effect on vote share.
+
+  For our dependent variable, we use a party's raw vote percentage and multiply it by the registered voter turnout. We do this for easier comparison between cases, as we expect some parties to not only increase their raw vote share, but to encourage higher voter turnout.
+
+## 1.2 Questions of Interest
+
+We are interested in two questions. First, what variables best predict the a party's vote share? A branch of this question is what is the effect of party strength on party vote share?
+
+  The second question is related to the first. How does the relationship between party strength and vote share change given the countries level of democracy?
+
+## 1.3 Regression Methods
+
+To answer the first question, we use forward, backward, and sequential stepwise model selection to choose our predictors. After checking assumptions, re-selecting variables, and transforming our variables to meet the regression assumptions, we came to this formula:
+
+\[
+VoteShare^{-1} = \beta_0 + \beta_1 \text{Party Strength} + \beta_2 \text{Ideology} + \beta_3 \text{Democracy Score} + \beta_4 \text{AntiPluralism} + \beta_5 \text{Pariah} + \beta_6 (\text{PartyBrand Continuity} = \text{Reformed Party}) + \beta_7 (\text{PartyBrand Continuity} = \text{Same Party}) + \beta_8 (\text{Compulsory Voting} = \text{Mild Enforcement}) + \beta_9 (\text{Compulsory Voting} = \text{Medium Enforcement}) + \beta_{10} (\text{Compulsory Voting} = \text{Strong Enforcement}) + \text{Error}
+\]
+
+
+Using the same processes, we came to the following formula for the interaction model between democracy and party strength:
+
+\[
+VoteShare^{-1} = \beta_0 + \beta_1 \text{Party Strength} + \beta_2 \text{Ideology} + \beta_3 \text{Democracy Score} + \beta_4 \text{AntiPluralism} + \beta_5 \text{Pariah} + \beta_6 (\text{PartyBrand Continuity} = \text{Reformed Party}) + \beta_7 (\text{PartyBrand Continuity} = \text{Same Party}) + \beta_8 (\text{Compulsory Voting} = \text{Mild Enforcement}) + \beta_9 (\text{Compulsory Voting} = \text{Medium Enforcement}) + \beta_{10} (\text{Compulsory Voting} = \text{Strong Enforcement}) + \beta_{11} (\text{Party Strength} \times \text{Democracy Score}) + \text{Error}
+\]
+
+
+For our analysis, we report the results of three models: a baseline OLS model to compare effect of vote share, a logistical regression model using the same formula as the baseline to compare effect on control of government, and an interaction OLS model on vote share again. You can find the full results and methodology in the appendix.
+
+# 2 Analyses, Results, and Interpretation
+
+To start our analysis for our first question, we first look at the relationship between our main independent variable, party strength, and our outcome variable, party vote share.
+
+```{r, fig.align='center', echo=FALSE, fig.width=6, fig.height=3.5}
+ggplot(data = dat, aes(x = psla, y = reg_vs)) +
+  geom_point() +
+  geom_smooth() + 
+  labs(title = "Party Stregnth vs Vote Share (Pre Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+```
+
+As one can see, there is strong, non-linear, and positive relationship between vote share and party strength. To more rigorously test this relationship, we fit a OLS regression.
+
+  As mentioned in the regression methods subsection, we utilize forward, backward, and sequential stepwise model selection in order to find the variables that have an effect on party vote share. The result tells us that the best predictors of party vote share are: party strength, compulsory voting, ideology, democracy score, anti-pluralism, pariah status, and party brand continuity. To remedy a violation of the normality assumption, we apply a Box Cox transformation and rerun the stepwise function and assumption checks to ensure we have a quality model. We found that this model largely met the assumptions of linearity, normality of errors, constant variance, influential observations, and multicollinearity. You can the results for our model selection and how we checked assumptions in the appendix.
+
+  Satisfied by the model, we may begin to make inferences. Below, we plot the mean effect of each of our variables and the 95% confidence interval for their respective effects. We do this so we can test the effect of each coefficient. In general, the null hypotheses is that, holding all else constant, there is no relationship between a given predictor and the outcome variable. The alternative is that there is a relationship, holding all else constant.
+
+  For ease of interpretation, we multiply the effects by negative one, since the transformed vote share variable is difficult to interpret otherwise. In all the plots, a positive effect mean the variable is positively associated with vote share.
+
+```{r, fig.align='center', echo=FALSE, fig.width=6, fig.height=3.5}
+
+stan_sub <- stan_glm(f2, data = dat_center, refresh = 0)
+
+new_data <- data.frame(psla = c(0, 1, 0,0,0,0,0,0,0,0,0), elect_system = c("0", "0", "1", "2", "3", "0","0","0","0","0","0"), v2pariglef = c(0,0,0,0,0,1,0,0,0,0,0), v2x_polyarchy = c(0,0,0,0,0,0,1,0,0,0,0), v2xpa_antiplural = c(0,0,0,0,0,0,0,1, 0,0,0), v2papariah = c(0,0,0,0,0,0,0,0,1,0, 0), v2paelcont = c("0", "0", "0", "0", "0", "0","0","0","0","1","2"))
+
+predictions <- posterior_linpred(stan_sub, newdata = new_data)
+
+pred_mat <- matrix(NA, nrow = 10, ncol = 3)
+for (i in 1:10) {
+  sub <- predictions[,1+i] - predictions[,1]
+  pred_mat[i,] <- quantile(sub, c(0.025, .5, .975))
+  }
+
+pred_mat <- as.data.frame(pred_mat)
+colnames(pred_mat) <- c("lower", "median", "upper")
+pred_mat$IV <- c("Party Stregnth", "Compulsory Vote (Mild)", "Compulsory Vote (Medium)", "Compulsory Vote (Strong)", "Left Wing", "Democracy", "Anti-Pluralist", "Pariah", "Reformed Party", "Same Party")
+
+pred_mat <- pred_mat %>%
+  mutate(IV = reorder(IV, -median))
+ggplot(data = pred_mat) +
+  geom_linerange(aes(y = IV, xmin = upper*-1, xmax = lower*-1)) +
+  geom_point(aes(y = IV, x = median*-1)) +
+  labs(title="Substantive Effects of Predictors On Vote Share", y = "", x = "Effect Size", caption = "All predictors are mean centered and standardized to a 2 standard deviation change") +
+  theme_minimal() +
+  geom_vline(xintercept = 0)
+
+```
+
+We find that party strength has the highest predicted effect on vote share of all the predictors in our model. Compulsory vote and left wing both have positive, significant effects. Meanwhile, pariah, reformed party, anti-pluralist, same party, and democracy all have negative effects on vote share.
+
+  For global diagnostics, we find that the model itself is significant, which is no surprise considering nearly all the coefficients are significant. We also find that the model predicts around 23 percent of the variance in vote share, a feat that is actually quite impressive considering what is typical of social science models.
+
+  As a robustness check, we also fit a logistical regression model predicting the probability of a party winning control of the government. Once again, party strength was the strongest predictor. The plot below shows the probability of winning control of the government give different values of party strength.
+
+```{r, fig.align='center', echo=FALSE, fig.width=6, fig.height=3.5}
+ggplot(data = test_data1, aes(x = ps, y = fv)) +
+  geom_smooth(color = "black") +
+  labs(title = "Probability of Controling Government", x = "Party Strength", y = "Pr(Winning Governemnt)") +
+  theme_minimal()
+```
+
+As shown by the previous plot, party strength is a robust predictor of party vote share, so much so that it significantly increases the probability of winning control of the government, holding all else equal. Meanwhile, party ideology, anti-pluralism, and pariah status also have significant effects of winning control of the government. We therefore reject the null hypothesis for these predictors. You can see the full results of our analysis, as well as diagnostic checks for both models, in the appendix.
+
+  For our second question, we began by plotting the vote share against party strength and added a color scale to indicate the levels of democracy for each observation.
+
+```{r, fig.align='center', echo=FALSE, fig.width=6, fig.height=3.5}
+ggplot(data = dat, aes(x = psla, y = reg_vs)) +
+  geom_point(aes(color = v2x_polyarchy)) +
+  geom_smooth(color = "red") + 
+  labs(title = "Party Stregnth vs Vote Share", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+```
+
+We suspect an interaction effect between level of democracy and party strength. It appears that as a country becomes more democratic, party strength matters less. This makes sense, since performance in government matters more in democratic systems than in autocracies. To more thoroughly investigate these results, we fit another OLS regression using the same transformed vote share outcome variable. Below is a marginal effects plot showing the coefficient size of party strength given various levels of democracy.
+
+  For this particular question, the null hypothesis is that the effect of party strength is not moderated by level of democracy. The alternative is that there is a moderating effect.
+
+```{r, fig.align='center', echo=FALSE, fig.width=6, fig.height=3.5}
+interplot(m = inter2, var1 = "psla", var2 = "v2x_polyarchy") +
+  labs(title = "Marginal Effect of Party Strength", subtitle = "Conditional on Democratic Quality", x = "Quality of Democracy", y = "Effect (Beta) of Party Strength") +
+  theme_minimal()
+```
+
+An additional plot shows the substantive effects of party strength at differing levels of democracy.
+
+```{r, fig.align='center', echo=FALSE, fig.width=6, fig.height=3.5}
+stan_sub <- stan_glm(f3, data = dat_center, refresh = 0)
+
+new_data <- data.frame(psla = c(0,0, 0, 1, 1, 1), elect_system = "0", v2pariglef = 0, v2x_polyarchy = c(-1,0,1,-1,0,1), v2xpa_antiplural = 0, v2papariah = 0, v2paelcont = "0")
+
+predictions <- posterior_linpred(stan_sub, newdata = new_data)
+
+pred_mat <- matrix(NA, nrow = 3, ncol = 3)
+for (i in 1:3) {
+  sub <- predictions[,3+i] - predictions[,i]
+  pred_mat[i,] <- quantile(sub, c(0.025, .5, .975))
+}
+
+pred_mat <- as.data.frame(pred_mat)
+colnames(pred_mat) <- c("lower", "median", "upper")
+pred_mat$IV <- c("Party Strength (Democracy = 2.5%)", "Party Strength (Democracy = 50%)", "Party Strength (Democracy = 97.5%)")
+
+pred_mat <- pred_mat %>%
+  mutate(IV = reorder(IV, -median))
+
+#### Use this to show out results instead of a regression table.
+
+ggplot(data = pred_mat) +
+  geom_linerange(aes(y = IV, xmin = upper*-1, xmax = lower*-1)) +
+  geom_point(aes(y = IV, x = median*-1)) +
+  labs(title="Substantive Effects of Party Strength", subtitle = "At Different Levels of Democracy", y = "", x = "Effect Size", caption = "All predictors are mean centered and standardized to a 2 standard deviation change") +
+  theme_minimal()
+
+```
+
+The effect of party strength differs significantly depending on the level of democracy in the country. Holding all else constant, as democracy increases, the effect of party strength on party vote share decreases. In countries without free and fair elections, otherwise called autocracies, party strength has a much larger effect. In democracies, the effect of party strength is diminished, probably because performance in government and meaningful accountability make elections more volatile. This interaction effect is significantly different from zero, so we reject the null hypothesis and conclude that there is a real moderating effect between party strength and level of democracy.
+
+  This model's diagnostics were sightly better. The model significance was slightly higher than the non-interaction model, while the variation explained by the model is higher than the non-interaction model, even after accounting for the number of predictors in the interaction model, around 25 percent.
+
+  As a final robustness check, we check the significance of the interaction term as a whole. After running a partial F-test, we can confirm that the interaction effect is important and should be included in our model.
+
+# 3 Conclusions
+
+In conclusion, our model and its results clearly indicate that party strength is an important indicator in a party’s vote share, the total amount of votes a party receives in proportion to the population. We also found that the degree of democracy existing in a country also significantly affects this turnout inversely; the more democratic a state is, the lesser the effect it has on a party’s vote share, likely due to changing priorities for voters that come with free and fair elections.
+
+  There do exist a few minor weaknesses in our model. While our Box Cox transformation drastically improved the normality of the errors in our data, it is still not perfect, so there may be slight inaccuracy introduced with our analysis.
+
+  We also must acknowledge that our observations are not identically and independently distributed. The importance of this is that our observations are of political parties across the many countries in the world. Most nations have more than one party that competes for the population’s votes so naturally one party’s vote share is going to affect that of the others. Therefore, the observations are not independent. However, that is an often times natural consequence of using observational data, so there is not much we can do about that using the methods we are familiar with.
+
+  Finally, we also recognize that because of the nature of politics and governance, it is possible that certain parties have advantages over others that stem from winning office. For example, a party that wins office one year could potentially use the government's resources in order to increase their party vote share for the next election. Essentially, the outcome of one election may affect the predictors of the next, indicating potential reverse causality.
+
+# 4 Contributions
+
+Ethan wrote the conclusion, formatted the regression model into LATEX, and helped with the analysis.
+
+Alex wrote the analysis and interpretation sections of the paper, and worked on the analysis, primary fitting the logit regression.
+
+Grant wrote the introduction and questions sections and worked on data wrangling and the analysis and visualizations.
+
+## APPENDIX
+
+First, a summary of the data so you can understand what is happening
+
+```{r}
+dat <- read.csv("~/R Projects/three30/partyinst_data_330.csv") %>%
+  mutate(COW = factor(COWcode.x), leg_elect = factor(v2eltype_0), exe_elect = factor(v2eltype_6), elect_system = factor(v2elcomvot), reg_vs = (v2eltrnout/100)*(v2pavote/100), v2paelcont = as.factor(v2paelcont)) %>%
+  na.omit()
+
+
+#### Here are the names of the variables we will be using:
+#### COW - a numerical indicator given to each country
+#### v2elvaptrn - Voting Age Turnout
+#### v2elvaptrn - Registered turnout
+#### leg_elect - legislative elections
+#### exe_elect - execitive elections
+#### v2xpa_antiplural - party's anti-pluralism measure
+#### v2pavote - party vote share
+#### v2paseatshare - party seat share
+#### v2paelcont - party brand continuity
+#### v2papariah - party's pariah measure
+#### v2pariglef - Party left right scale
+#### elect_system - electoral system
+#### v2x_polyarchy - Democracy score
+#### piendla - Party institutioanlization ****
+#### psla - Party stregnth ****
+#### vap_vs - Percent of the VAP turnout that a party got ****
+#### reg_vs - Percent of the Registered turn out a party got ****
+
+summary(dat)
+
+#### The VAP vote share variable, seems suspect (fraud maybe?), so there may be some coding errors, so we will stick with registed vote share.
+```
+
+Here is our model selections methodology:
+
+```{r}
+## Stepwise model selection
+attach(dat)
+
+base_model <- lm(reg_vs ~ 1)
+full_model <- lm(reg_vs ~ elect_system + v2pariglef + psla + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + v2x_polyarchy)
+
+car::vif(full_model)
+
+forward <- step(base_model,
+                direction = "forward",
+                k = 2,
+                scope = list(lower = base_model, upper = full_model))
+
+back <- step(full_model,
+                direction = "backward",
+                k = 2,
+                scope = list(lower = base_model, upper = full_model))
+
+both <- step(base_model,
+             direction = "both",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+forward
+back
+both
+
+#### The best formula from all three stepwise selections is this:
+
+f1 <- reg_vs ~ psla + elect_system + v2x_polyarchy + v2pariglef + 
+  v2papariah + v2paelcont
+
+```
+
+Next is fitting the model and looking at the assumption
+
+```{r}
+m1 <- lm(f1)
+
+autoplot(m1, which = 1, nrow = 1, ncol = 1)
+
+#### Linearity looks suprisingly good here.
+
+autoplot(m1, which = 2, nrow = 1, ncol = 1) 
+hist(m1$residuals)
+
+#### Errors are not normal!
+
+autoplot(m1, which = 3, nrow = 1, ncol = 1) 
+
+#### There might be some heterogeneity, but its pretty good here.
+
+autoplot(m1, which = 4, nrow = 1, ncol = 1)
+
+#### Cooks Distance looks pretty good
+```
+
+We needed a Box Cox transformation. This code gave us an optimal transformation.
+
+```{r}
+f1
+bc_results <- boxCox((reg_vs+.1) ~ psla + elect_system + v2x_polyarchy + v2pariglef + v2papariah + 
+                       v2paelcont)
+
+
+#### It looks like we should mutate the DV and make it reg_vs^-1
+
+dat_new <- dat %>%
+  mutate(reg_vs = (reg_vs + .1)^(-1))
+```
+
+Recheck assumptions to see if this helped
+
+```{r}
+attach(dat_new)  
+
+m2 <- lm(f1)
+
+autoplot(m2, which = 1, nrow = 1, ncol = 1)
+
+#### Linearity looks suprisingly good here.
+
+autoplot(m2, which = 2, nrow = 1, ncol = 1) 
+hist(m2$residuals)
+
+#### Errors are more normal!
+
+autoplot(m2, which = 3, nrow = 1, ncol = 1) 
+
+#### There might be some heterogeneity, but its pretty good here.
+
+autoplot(m2, which = 4, nrow = 1, ncol = 1)
+
+#### Cooks Distance looks pretty good
+```
+
+To ensure that we have the best model here, lets rerun this with the stepwise selection
+
+```{r}
+base_model <- lm(reg_vs ~ 1)
+full_model <- lm(reg_vs ~ elect_system + v2pariglef + psla + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + v2x_polyarchy)
+
+forward <- step(base_model,
+                direction = "forward",
+                k = 2,
+                scope = list(lower = base_model, upper = full_model))
+
+back <- step(full_model,
+             direction = "backward",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+both <- step(base_model,
+             direction = "both",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+forward
+back
+both
+
+#### All of the selection methods choose this model, so we will go with that:
+
+f2 <- reg_vs ~ psla + elect_system + v2pariglef + v2x_polyarchy + 
+  v2xpa_antiplural + v2papariah + v2paelcont
+```
+
+Recheck assumptions to see if the model is up to snuff.
+
+```{r}
+m3 <- lm(f2)
+
+autoplot(m3, which = 1, nrow = 1, ncol = 1)
+
+#### Linearity looks good here.
+
+autoplot(m3, which = 2, nrow = 1, ncol = 1) 
+shapiro.test(m3$residuals)
+
+#### Errors are more normal than the other models. Best we are probaly going to get.
+
+autoplot(m3, which = 3, nrow = 1, ncol = 1) 
+
+#### There might be some heterogeneity, but its pretty good here.
+
+autoplot(m3, which = 4, nrow = 1, ncol = 1)
+
+#### no outliers
+
+car::vif(m3)
+
+#### No multicolinearity!
+```
+
+Now for exploratory data analysis
+
+```{r}
+ggplot(data = dat, aes(x = psla, y = reg_vs)) +
+  geom_point() +
+  geom_smooth() + 
+  labs(title = "Party Stregnth vs Vote Share (Pre Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+ggplot(data = dat_new, aes(x = psla, y = reg_vs)) +
+  geom_point() +
+  geom_smooth() +
+  labs(title = "Party Stregnth vs Vote Share (Post Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+#### for Question 2
+
+ggplot(data = dat, aes(x = psla, y = reg_vs)) +
+  geom_point(aes(color = v2x_polyarchy)) +
+  geom_smooth(color = "red") + 
+  labs(title = "Party Stregnth vs Vote Share (Pre Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+ggplot(data = dat_new, aes(x = psla, y = reg_vs)) +
+  geom_point(aes(color = v2x_polyarchy)) +
+  geom_smooth(color = "red") + 
+  labs(title = "Party Stregnth vs Vote Share (Post Box-Cox Transformation)", x = "Party Strength", y = "Vote Share") + 
+  theme_minimal()
+
+dat_interflex <- dat %>%
+  rename(Democracy = v2x_polyarchy, Vote_Share = reg_vs, Party_Strength = psla)
+
+interflex(estimator = "gam", Y = "Vote_Share", X = "Party_Strength", D = "Democracy", data = dat_interflex)
+
+```
+
+Regression models
+
+```{r}
+summary(m3) #### OLS
+
+#### Good F stat and r squared value is about what is industry standard for poli sci. Most of the variables are significant.
+
+#### partial F test here
+
+#### How important is the effect of party strength
+
+m3 <- lm(reg_vs ~ psla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new)
+
+m4 <- lm(reg_vs ~ elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new)
+
+anova(m4, m3) #### Party strength is really important
+```
+
+Logit model. Mostly a robustness check, so we did not go too crazy here.
+
+```{r}
+robust <- glm(gov ~ psla + elect_system + v2pariglef + v2x_polyarchy + v2xpa_antiplural + v2papariah + v2paelcont, data = dat_new, family = binomial(link = "logit"))
+
+scatter.smooth(x = dat$psla, y = dat$gov - 1)
+scatter.smooth(x = dat$v2pariglef, y = dat$gov - 1)
+scatter.smooth(x = dat$v2x_polyarchy, y = dat$gov - 1)
+scatter.smooth(x = dat$v2xpa_antiplural, y = dat$gov - 1)
+scatter.smooth(x = dat$v2papariah, y = dat$gov - 1)
+
+plot(robust, which = 5, cook.levels = .5)
+
+vif(robust)
+
+
+summary(robust)
+```
+
+Model selection and assumption check for interaction model
+
+```{r}
+attach(dat_center)
+
+base_model <- lm(reg_vs ~ psla*v2x_polyarchy)
+full_model <- lm(reg_vs ~ elect_system + v2pariglef + v2papariah + exe_elect + v2paelcont + v2xpa_antiplural + psla*v2x_polyarchy)
+
+forward <- step(base_model,
+                direction = "forward",
+                k = 2,
+                scope = list(lower = base_model, upper = full_model))
+
+back <- step(full_model,
+             direction = "backward",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+both <- step(base_model,
+             direction = "both",
+             k = 2,
+             scope = list(lower = base_model, upper = full_model))
+
+forward
+back
+both
+
+#### all the models give the same formula here, so we are going to go with:
+
+f3 <- reg_vs ~ psla + v2x_polyarchy + elect_system + v2pariglef + 
+  v2xpa_antiplural + v2papariah + v2paelcont + psla:v2x_polyarchy
+
+
+#### check assumptions
+
+inter1 <- lm(f3)
+
+autoplot(inter1, which = 1, nrow = 1, ncol = 1)
+
+#### linearity looks good
+
+autoplot(inter1, which = 2, nrow = 1, ncol = 1)
+hist(inter1$residuals)
+
+#### looks pretty normal
+
+autoplot(inter1, which = 3, nrow = 1, ncol = 1)
+
+#### constant variance looks good
+
+autoplot(inter1, which = 4, nrow = 1, ncol = 1)
+
+#### no serious outliers.
+
+car::vif(inter1, type = "predictor")
+
+#### no multicolinearity
+
+#### meets assumptions
+```
+
+Look at results
+
+```{r}
+summary(inter1)
+#### F stat is not too much larger, and the adjusted r-squared is not that much better, so I wonder is the interaction effect is that important.
+
+anova(m3, inter1)
+
+#### yeah, looks like it is.
+```
