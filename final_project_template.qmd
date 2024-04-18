@@ -445,7 +445,7 @@ We consider several predictors of party vote share. Regarding party factors, we 
 
 Because of scholars recent focus on party strength (i.e., the party's organizational capacity to mobilize its voters), we are particularly interested in it effect.
 
-For our dependent variable, we use a parties raw vote percentage and multiply it by the registered voter turnout. We do this for easier comparison between cases, as we expect some parties to not only increase their raw vote share, but to encourage higher voter turnout.
+For our dependent variable, we use a party's raw vote percentage and multiply it by the registered voter turnout. We do this for easier comparison between cases, as we expect some parties to not only increase their raw vote share, but to encourage higher voter turnout.
 
 ## 1.2 Questions of Interest
 
@@ -455,7 +455,7 @@ The second question is related to the first. How does the relationship between p
 
 ## 1.3 Regression Methods
 
-Two answer the first question, we use forward, backward, and sequential stepwise model selection to choose our predictors. After checking assumptions, re-selecting variables, and transforming our variables to meet the regression assumptions, we came to this formula:
+To answer the first question, we use forward, backward, and sequential stepwise model selection to choose our predictors. After checking assumptions, re-selecting variables, and transforming our variables to meet the regression assumptions, we came to this formula:
 
 $VoteShare^{-1} = \beta_0 + \beta_1PartyStrength + \beta_2Ideology + \beta_3DemocracyScore + \beta_4AntiPluralism + \beta_5Pariah + \beta_6(PartyBrandContinuity = 1) + \beta_7(PartyBrandContinuity = 2) + \beta_8(Compulsory Voting = 1) + \beta_9(CompulsoryVoting = 2) + \beta_10(CompulsoryVoting = 3) + Error$
 
@@ -482,7 +482,7 @@ As one can see, there is strong, non-linear, and positive relationship between v
 
   As mentioned in the regression methods subsection, we utilize forward, backward, and sequential stepwise model selection in order to find the variables that have an effect on party vote share. The result tells us that the best predictors of party vote share are: party strength, compulsory voting, ideology, democracy score, anti-pluralism, pariah status, and party brand continuity. To remedy a violation of the normality assumption, we apply a Box Cox transformation and rerun the stepwise function and assumption checks to ensure we have a quality model. You can the results for our model selection and how we checked assumptions in the appendix. 
   
-  Satisfied by the model, we may begin to make inferences. Below, we plot the mean effect of each of our variables and the 95% confidence interval for their respective effects. For ease of interpretation, we multiple the effects by negative one, since the transformed vote share variable is difficult to interpret otherwise. In all the plots, a positive effect mean the variable is positively associated with vote share.
+  Satisfied by the model, we may begin to make inferences. Below, we plot the mean effect of each of our variables and the 95% confidence interval for their respective effects. For ease of interpretation, we multiply the effects by negative one, since the transformed vote share variable is difficult to interpret otherwise. In all the plots, a positive effect mean the variable is positively associated with vote share.
   
 ```{r, fig.align='center', echo=FALSE, fig.width=6, fig.height=3.5}
 
@@ -536,7 +536,7 @@ ggplot(data = dat, aes(x = psla, y = reg_vs)) +
 ```
 
 
-There seems to be some sort of interaction effect between level of democracy and party strength. It appears that a country becomes more democratic, party strength matter less. This makes sense, since performance in government matters more in democratic systems than in autocracies. To more thoroughly investigate these results, we fit another OLS regression using the same transformed vote share outcome variable. Below is a marginal effects plot showing the coefficient size of party strength given various levels of democracy.
+We suspect an interaction effect between level of democracy and party strength. It appears that as a country becomes more democratic, party strength matters less. This makes sense, since performance in government matters more in democratic systems than in autocracies. To more thoroughly investigate these results, we fit another OLS regression using the same transformed vote share outcome variable. Below is a marginal effects plot showing the coefficient size of party strength given various levels of democracy.
 
 ```{r, fig.align='center', echo=FALSE, fig.width=6, fig.height=3.5}
 interplot(m = inter2, var1 = "psla", var2 = "v2x_polyarchy") +
@@ -576,9 +576,9 @@ ggplot(data = pred_mat) +
 ```
 
 
-The effect of party strength differs significantly depending on the level of democracy in the country. Holding all else constant, as democracy increases, the effect of party strength on party vote share decreases. In countries were there are not free and fair elections, otherwise called autocracies, party strength has a much larger effect. In democracies, the effect of party strength is diminished, probably because performance in government and meaningful accountability make elections more volatile. 
+The effect of party strength differs significantly depending on the level of democracy in the country. Holding all else constant, as democracy increases, the effect of party strength on party vote share decreases. In countries without free and fair elections, otherwise called autocracies, party strength has a much larger effect. In democracies, the effect of party strength is diminished, probably because performance in government and meaningful accountability make elections more volatile. 
 
-Though not explicitly one of our questions, we were curious about the overall significant of the interaction term. After running a partial F-test, we can confirm that the interaction effect is important and should be included in our model.
+Although it was not explicitly one of our questions, we were curious about the overall significant of the interaction term. After running a partial F-test, we can confirm that the interaction effect is important and should be included in our model.
 
 # 3 Conclusions
 
@@ -586,7 +586,7 @@ In conclusion, our model and its results clearly indicate that party strength is
 
   There do exist a few minor weaknesses in our model. While our Box Cox transformation drastically improved the normality of the errors in our data, it is still not perfect, so there may be slight inaccuracy introduced with our analysis.
 
-  We also must acknowledge that our observations are not identically and independently distributed. The importance of this is that our observations are of political parties across the many countries in the world. Most nations have more than one party that competes for the population’s votes so naturally one party’s vote share is going to affect that of the others. Therefore, the observations are not independent. However, that is the nature of obervational data, so there is not much we can do about that using the methods we are familiar with.
+  We also must acknowledge that our observations are not identically and independently distributed. The importance of this is that our observations are of political parties across the many countries in the world. Most nations have more than one party that competes for the population’s votes so naturally one party’s vote share is going to affect that of the others. Therefore, the observations are not independent. However, that is a oftentimes natural consequence of using observational data, so there is not much we can do about that using the methods we are familiar with.
   
   Going off of that, we must also recognize that because of the nature of political parties, it is possible that certain parties have advantages over other parties in terms of obtaining a larger vote share. For example, a party that wins office one year could potentially use the government's resources in order to increase their party vote share for the next. Essentially, the outcome of one election may affect the predictors of the next, indicating potential reverse causality.
 
@@ -596,7 +596,7 @@ Ethan wrote the conclusion, formatted the regression model into LATEX, and helpe
 
 Alex wrote the analysis and interpretation sections of the paper, and worked on the analysis, primary fitting the logit regression.
 
-Grant wrote the introduction and questions sections and worked on data wrangling and the analysis and vizualizations.
+Grant wrote the introduction and questions sections and worked on data wrangling and the analysis and visualizations.
 
 ## APPENDIX
 
